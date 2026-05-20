@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AnimifyAI 管理后台</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" type="image/png" href="/assets/images/mascot-clean.png">
+<link rel="stylesheet" href="/assets/css/style.css?v=10">
+<style>
+body{background:var(--surface-alt)}
+.admin-hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 0}
+.admin-hdr .nav-inner{display:flex;align-items:center;justify-content:space-between}
+.admin-hdr h1{font-size:1.2rem;font-weight:800;display:flex;align-items:center;gap:8px}
+.admin-hdr h1 span{background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.tabs{display:flex;gap:4px;margin:28px 0 20px}
+.tab-btn{padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-family:inherit;font-size:.84rem;font-weight:600;cursor:pointer;color:var(--text-secondary);transition:all .15s}
+.tab-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.panel{display:none}.panel.active{display:block}
+.save-btn{display:block;margin:28px auto 0;padding:14px 40px;background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;border:none;border-radius:var(--radius);font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;transition:all .2s var(--bounce)}
+.save-btn:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(108,92,231,.4)}
+.toast-msg{text-align:center;margin-top:10px;font-size:.85rem;font-weight:500;min-height:24px}
+.toast-msg.success{color:#00B894}.toast-msg.error{color:#DC2626}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm)}
+.card h4{font-size:.95rem;font-weight:700;margin-bottom:14px;color:var(--text)}
+.preview-row{display:flex;gap:12px;margin-bottom:14px}
+.preview-col{flex:1;text-align:center}
+.preview-col img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--radius-sm);background:var(--surface-alt);border:1px solid var(--border-light)}
+.preview-col .img-lbl{font-size:.72rem;color:var(--text-muted);margin-top:4px;font-weight:600}
+.field-row{margin-top:8px}
+.field-row label{display:block;font-size:.74rem;font-weight:600;color:var(--text-secondary);margin-bottom:4px}
+.field-row input[type=file]{width:100%;font-size:.76rem;padding:7px;border:1px dashed var(--border);border-radius:8px;background:var(--surface-alt);cursor:pointer}
+.field-row input[type=text]{width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:.78rem;background:var(--surface-alt);color:var(--text);font-family:inherit}
+.grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px}
+.help-box{background:rgba(108,92,231,.06);border:1px solid rgba(108,92,231,.15);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;font-size:.84rem;color:var(--text-secondary);line-height:1.6}
+.help-box strong{color:var(--primary)}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center}
+.stat-card .stat-num{font-size:2rem;font-weight:800;color:var(--primary)}
+.stat-card .stat-lbl{font-size:.75rem;color:var(--text-muted);margin-top:4px}
+.quick-links{display:flex;gap:8px;flex-wrap:wrap}
+.quick-links a{font-size:.84rem;padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text-secondary);text-decoration:none;font-weight:500;transition:all .15s}
+.quick-links a:hover{border-color:var(--primary);color:var(--primary)}
+</style>
+</head>
+<body>
+
+<header class="admin-hdr">
+  <div class="nav-inner container">
+    <h1>Animify<span>AI</span> 管理后台</h1>
+    <div style="display:flex;gap:8px">
+      <a href="/en/" class="btn btn-secondary" style="font-size:.8rem;padding:6px 14px">查看 EN</a>
+      <a href="/zh/" class="btn btn-secondary" style="font-size:.8rem;padding:6px 14px">查看 ZH</a>
+      <a href="/en/#generator" class="btn btn-primary" style="font-size:.8rem;padding:6px 14px">✧ 生成图片</a>
+    </div>
+  </div>
+</header>
+
+<main class="container admin-section">
+  <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:4px">网站管理</h2>
+  <p style="color:var(--text-muted);font-size:.88rem;margin-bottom:16px">管理展示区图片、查看网站状态。图片保存到浏览器 localStorage，全站（EN + ZH）即时生效。</p>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('showcase')">🖼️ 展示区管理</button>
+    <button class="tab-btn" onclick="switchTab('blog')">📝 博客图片</button>
+    <button class="tab-btn" onclick="switchTab('overview')">📊 网站概览</button>
+  </div>
+
+  <!-- ====== 展示区管理 ====== -->
+  <div class="panel active" id="panel-showcase">
+    <div class="help-box">
+      <strong>如何获得匹配的对比图？</strong><br>
+      1. 前往 <a href="/zh/#generator" target="_blank">生成器</a>，上传照片，生成动漫风格图<br>
+      2. 下载生成结果，同时保存原图和AI生成图<br>
+      3. 回到这里，为每个风格上传对应的"原图"和"AI生成图"<br>
+      4. 点击 <strong>保存全部</strong> —— 全站立即使用你上传的真实AI图片
+    </div>
+
+    <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:14px">对比滑块（3组）</h3>
+    <div class="grid2" id="sliderGrid"></div>
+
+    <h3 style="font-size:1.05rem;font-weight:700;margin:24px 0 14px">风格转换展示（6组）</h3>
+    <div class="grid2" id="transformGrid"></div>
+
+    <button class="save-btn" onclick="saveAll()">💾 保存全部修改</button>
+    <div class="toast-msg" id="toast"></div>
+  </div>
+
+  <!-- ====== 博客图片管理 ====== -->
+  <div class="panel" id="panel-blog">
+    <div class="help-box">
+      <strong>博客文章配图：</strong><br>
+      为每篇博客文章上传配图。<strong>保存</strong>会同时存到本地和云端 Worker KV。<br>
+      云端同步后，<strong>所有访客</strong>（任何浏览器）都能看到你的自定义图片。<br>
+      首次同步需输入管理员密码，之后本次会话自动记住。<br>
+      建议尺寸：文章头图 800×400px，内嵌图 400×300px。
+    </div>
+    <div class="grid2" id="blogImageGrid"></div>
+    <div style="display:flex;gap:12px;justify-content:center;margin-top:28px">
+      <button class="save-btn" onclick="saveBlogImages()">💾 保存并同步到云端</button>
+      <button class="save-btn" style="background:var(--surface);color:var(--text);border:1px solid var(--border)" onclick="syncBlogImagesToWorker()">🔄 仅同步已有图片</button>
+    </div>
+  </div>
+
+  <!-- ====== 网站概览 ====== -->
+  <div class="panel" id="panel-overview">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-num" id="statSliders">3</div><div class="stat-lbl">对比滑块</div></div>
+      <div class="stat-card"><div class="stat-num" id="statTransforms">6</div><div class="stat-lbl">风格展示</div></div>
+      <div class="stat-card"><div class="stat-num" id="statCustom">—</div><div class="stat-lbl">已自定义图片</div></div>
+    </div>
+
+    <div class="card">
+      <h4>快捷链接</h4>
+      <div class="quick-links">
+        <a href="/en/" target="_blank">← EN 首页</a>
+        <a href="/zh/" target="_blank">← ZH 首页</a>
+        <a href="/en/#generator" target="_blank">✧ 图片生成器</a>
+        <a href="/en/pricing/" target="_blank">💎 定价页</a>
+        <a href="#" onclick="resetUsage();return false">🔄 重置免费次数</a>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h4>🧪 测试模式</h4>
+      <p style="font-size:.82rem;color:var(--text-secondary);margin-bottom:12px">模拟配额用完后的网页效果，不会消耗真实额度。</p>
+      <div class="quick-links">
+        <a href="#" onclick="simulateExhausted('ip');return false" id="btnSimIP">🟡 模拟：个人配额用完</a>
+        <a href="#" onclick="simulateExhausted('global');return false" id="btnSimGlobal">🔴 模拟：全局配额用完</a>
+        <a href="#" onclick="simulateExhausted('off');return false" id="btnSimOff">🟢 关闭模拟（正常模式）</a>
+      </div>
+      <p style="font-size:.76rem;color:var(--text-muted);margin-top:10px" id="simStatus">当前：正常模式</p>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h4>使用说明</h4>
+      <p style="font-size:.85rem;color:var(--text-secondary);line-height:1.7">
+        <strong>展示区图片：</strong>上传后保存在浏览器 localStorage，同一浏览器访问 EN 和 ZH 页面都会使用你上传的图片。更换浏览器或清除数据后会恢复默认图片。<br>
+        <strong>生图可靠性：</strong>系统首选 Flux.2 模型（最高质量），自动回退到 Gemini。每次生成前自动同步信用状态，避免信用不一致导致失败。<br>
+        <strong>重置次数：</strong>点击"重置免费次数"会清除你的用量记录，恢复3次免费生成。<br>
+        <strong>Worker 配置：</strong>API 密钥通过 <code>wrangler secret put</code> 管理。
+      </p>
+    </div>
+  </div>
+</main>
+
+<script>
+const KEY = 'animifyai_showcase';
+const API_BASE = ''; // same-domain via Pages Functions proxy
+
+const DEFAULTS = {
+  sliders: [
+    { id:'ghibli', title:'吉卜力风格', desc:'人像 → 动漫魔法',
+      before:'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600&h=600&fit=crop',
+      after:'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600&h=600&fit=crop',
+      filter:'hue-rotate(30deg) saturate(1.5) contrast(1.1)',
+      beforeLabel:'原图', afterLabel:'吉卜力' },
+    { id:'shinkai', title:'新海诚风格', desc:'风景 → 璀璨天空',
+      before:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=600&fit=crop',
+      after:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=600&fit=crop',
+      filter:'hue-rotate(180deg) saturate(1.8) brightness(1.2)',
+      beforeLabel:'原图', afterLabel:'新海诚' },
+    { id:'chibi', title:'Q版风格', desc:'宠物 → 超萌角色',
+      before:'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600&h=600&fit=crop',
+      after:'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600&h=600&fit=crop',
+      filter:'hue-rotate(300deg) saturate(1.6) brightness(1.15)',
+      beforeLabel:'原图', afterLabel:'Q版' }
+  ],
+  transforms: [
+    { id:'ghibli', title:'吉卜力',
+      bg:'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&h=600&fit=crop',
+      inset:'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=280&h=280&fit=crop' },
+    { id:'shinkai', title:'新海诚',
+      bg:'https://images.unsplash.com/photo-1536514492776-4a2c70d0a397?w=600&h=600&fit=crop',
+      inset:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=280&h=280&fit=crop' },
+    { id:'ukiyoe', title:'浮世绘',
+      bg:'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&h=600&fit=crop',
+      inset:'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=280&h=280&fit=crop' },
+    { id:'cyberpunk', title:'赛博朋克',
+      bg:'https://images.unsplash.com/photo-1515634928627-2a4e0dae3ddf?w=600&h=600&fit=crop',
+      inset:'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=280&h=280&fit=crop' },
+    { id:'watercolor', title:'水彩',
+      bg:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=600&fit=crop',
+      inset:'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=280&h=280&fit=crop' },
+    { id:'chibi', title:'Q版',
+      bg:'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=600&h=600&fit=crop',
+      inset:'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=280&h=280&fit=crop' }
+  ],
+  blogImages: {}
+};
+const BLOG_SLUGS = [
+  'how-to-turn-photos-into-ghibli-anime-art','best-ai-anime-generators-2025','makoto-shinkai-art-style-explained',
+  'photo-to-anime-converter-guide','ai-anime-art-for-social-media','cyberpunk-anime-aesthetic-guide',
+  'rise-of-ai-anime-art','create-anime-profile-pictures','watercolor-anime-style-guide',
+  'ukiyoe-digital-art-guide','chibi-character-design-ai','ai-art-ethics-anime',
+  'anime-art-print-on-demand','photo-to-anime-transformations','how-ai-anime-generators-work'
+];
+
+let data = JSON.parse(JSON.stringify(DEFAULTS));
+try { const s = localStorage.getItem(KEY); if (s) { const p = JSON.parse(s); data.sliders = p.sliders || data.sliders; data.transforms = p.transforms || data.transforms; data.blogImages = p.blogImages || {}; } } catch(e) { console.warn('Admin: failed to load saved data —', e.message); }
+
+function toBase64(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 600; // small enough for localStorage, large enough for display
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        const ratio = Math.min(MAX / w, MAX / h);
+        w = Math.round(w * ratio); h = Math.round(h * ratio);
+      }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL('image/jpeg', 0.75));
+    };
+    img.onerror = () => reject(new Error('Image load failed'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+function renderSliders() {
+  document.getElementById('sliderGrid').innerHTML = data.sliders.map((s, i) => `
+    <div class="card">
+      <h4>${s.title} — 对比效果</h4>
+      <div class="preview-row">
+        <div class="preview-col">
+          <img src="${s.before}" alt="Before">
+          <div class="img-lbl">原图（${s.beforeLabel}）</div>
+        </div>
+        <div class="preview-col">
+          <img src="${s.after}" alt="After" style="filter:${s.filter||'none'}">
+          <div class="img-lbl">AI生成（${s.afterLabel}）</div>
+        </div>
+      </div>
+      <div class="field-row"><label>原图 — 原始照片</label><input type="file" accept="image/*" onchange="uploadSlider(${i},'before',this)"></div>
+      <div class="field-row"><label>AI生成图 — 动漫结果 <span style="color:var(--primary);font-weight:700">（必须）</span></label><input type="file" accept="image/*" onchange="uploadSlider(${i},'after',this)"></div>
+      <div class="field-row"><label>CSS滤镜（仅无真实AI图时使用）</label><input type="text" value="${s.filter||''}" onchange="data.sliders[${i}].filter=this.value" placeholder="例：hue-rotate(30deg) saturate(1.5)"></div>
+    </div>
+  `).join('');
+}
+
+function renderTransforms() {
+  document.getElementById('transformGrid').innerHTML = data.transforms.map((t, i) => `
+    <div class="card">
+      <h4>${t.title} — 风格展示</h4>
+      <div class="preview-row">
+        <div class="preview-col">
+          <img src="${t.bg}" alt="Anime background">
+          <div class="img-lbl">动漫背景大图</div>
+        </div>
+        <div class="preview-col">
+          <img src="${t.inset}" alt="Original inset">
+          <div class="img-lbl">原图嵌入角</div>
+        </div>
+      </div>
+      <div class="field-row"><label>动漫背景大图 <span style="color:var(--primary);font-weight:700">（必须）</span></label><input type="file" accept="image/*" onchange="uploadTransform(${i},'bg',this)"></div>
+      <div class="field-row"><label>原图小嵌角</label><input type="file" accept="image/*" onchange="uploadTransform(${i},'inset',this)"></div>
+    </div>
+  `).join('');
+}
+
+function uploadSlider(idx, field, input) {
+  const f = input.files[0]; if (!f) return;
+  toBase64(f).then(b64 => {
+    data.sliders[idx][field] = b64;
+    if (field === 'after') data.sliders[idx].filter = '';
+    renderSliders();
+    toast('预览已更新 — 点击"保存全部"生效', 'success');
+  });
+}
+
+function uploadTransform(idx, field, input) {
+  const f = input.files[0]; if (!f) return;
+  toBase64(f).then(b64 => {
+    data.transforms[idx][field] = b64;
+    renderTransforms();
+    toast('预览已更新 — 点击"保存全部"生效', 'success');
+  });
+}
+
+async function saveAll() {
+  localStorage.setItem(KEY, JSON.stringify(data));
+  updateOverviewStats();
+  await syncShowcaseToWorker();
+  toast('全部图片已保存！', 'success');
+}
+
+async function syncShowcaseToWorker() {
+  const password = 'animifyai2025';
+  let synced = 0;
+  try {
+    const body = { sliders: data.sliders, transforms: data.transforms };
+    const resp = await fetch(API_BASE + '/api/showcase', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + password },
+      body: JSON.stringify(body),
+    });
+    if (resp.ok) {
+      const r = await resp.json();
+      synced = (r.sliders || 0) + (r.transforms || 0);
+      toast('✅ 展示区已同步到云端（' + r.sliders + ' 组对比 + ' + r.transforms + ' 组风格）', 'success');
+    }
+  } catch(e) { toast('⚠️ 展示区云端同步失败，请检查网络', 'error'); }
+}
+
+// Blog images
+function renderBlogImages() {
+  document.getElementById('blogImageGrid').innerHTML = BLOG_SLUGS.map(slug => {
+    const img = data.blogImages[slug] || {};
+    const name = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).slice(0, 40);
+    return `
+    <div class="card">
+      <h4>${name}</h4>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <div style="flex:1;text-align:center">
+          ${img.hero ? `<img src="${img.hero}" alt="Hero" style="width:100%;aspect-ratio:2/1;object-fit:cover;border-radius:var(--radius-sm);background:var(--surface-alt)">` : '<div style="width:100%;aspect-ratio:2/1;background:var(--surface-alt);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:.7rem">无头图</div>'}
+          <div style="font-size:.68rem;color:var(--text-muted);margin-top:3px">头图</div>
+        </div>
+      </div>
+      <div class="field-row"><label>文章头图 (800×400)</label><input type="file" accept="image/*" onchange="uploadBlogImage('${slug}','hero',this)"></div>
+      <div class="field-row"><label>内嵌图 1 (400×300)</label><input type="file" accept="image/*" onchange="uploadBlogImage('${slug}','inline1',this)"></div>
+      <div class="field-row"><label>内嵌图 2 (400×300)</label><input type="file" accept="image/*" onchange="uploadBlogImage('${slug}','inline2',this)"></div>
+    </div>`;
+  }).join('');
+}
+
+function uploadBlogImage(slug, field, input) {
+  const f = input.files[0]; if (!f) return;
+  toBase64(f).then(b64 => {
+    if (!data.blogImages[slug]) data.blogImages[slug] = {};
+    data.blogImages[slug][field] = b64;
+    renderBlogImages();
+    toast('预览已更新 — 点击"保存博客图片"生效', 'success');
+  });
+}
+
+function saveBlogImages() {
+  localStorage.setItem(KEY, JSON.stringify(data));
+  syncBlogImagesToWorker();
+  toast('已保存到本地，正在同步到云端...', 'success');
+}
+
+async function syncBlogImagesToWorker() {
+  const password = 'animifyai2025';
+
+  let synced = 0;
+  let failed = 0;
+  const allImages = [];
+  for (const [slug, images] of Object.entries(data.blogImages)) {
+    for (const [field, b64] of Object.entries(images)) {
+      if (b64 && b64.startsWith('data:')) allImages.push({slug, field, b64});
+    }
+  }
+  if (allImages.length === 0) { toast('没有需要同步的图片（请先上传本地图片文件）', 'error'); return; }
+
+  toast('正在同步 ' + allImages.length + ' 张图片到云端...', 'success');
+
+  for (const {slug, field, b64} of allImages) {
+    try {
+      const resp = await fetch(API_BASE + '/api/blog-images', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + password },
+        body: JSON.stringify({ slug, field, imageBase64: b64 }),
+      });
+      if (resp.ok) { synced++; }
+      else { failed++; console.warn('Sync failed ' + slug + '/' + field + ': HTTP ' + resp.status); }
+    } catch(e) { failed++; console.warn('Sync failed ' + slug + '/' + field + ':', e.message); }
+  }
+  if (synced > 0 && failed === 0) {
+    toast('✅ 已同步 ' + synced + ' 张图片到云端！所有访客都能看到。', 'success');
+  } else if (synced > 0) {
+    toast('⚠️ 同步 ' + synced + ' 张成功，' + failed + ' 张失败。请检查网络后点"仅同步已有图片"重试。', 'error');
+  } else {
+    toast('❌ 同步失败（' + failed + ' 张）。请检查网络连接后重试。', 'error');
+  }
+}
+
+function updateOverviewStats() {
+  let customCount = 0;
+  data.sliders.forEach(s => { if (s.after && s.after.startsWith('data:')) customCount++; });
+  data.transforms.forEach(t => { if (t.bg && t.bg.startsWith('data:')) customCount++; });
+  document.getElementById('statCustom').textContent = customCount + '/7';
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`[onclick="switchTab('${name}')"]`).classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+async function resetUsage() {
+  try {
+    const fp = localStorage.getItem('animifyai_fp') || '';
+    const r = await fetch(API_BASE + '/api/reset-my-usage', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ fingerprint: fp })
+    });
+    const d = await r.json();
+    if (d.success) {
+      localStorage.removeItem('animifyai_used');
+      toast('免费次数已重置！你现在有 3 次免费生成。', 'success');
+    } else {
+      toast('重置失败：' + (d.error || '未知错误'), 'error');
+    }
+  } catch(e) {
+    // Try local reset as fallback
+    localStorage.removeItem('animifyai_used');
+    toast('已本地清除次数（Worker 可能无法访问）。', 'success');
+  }
+}
+
+function simulateExhausted(mode) {
+  if (mode === 'off') {
+    localStorage.removeItem('animifyai_sim_exhausted');
+    document.getElementById('simStatus').textContent = '当前：正常模式';
+    document.getElementById('btnSimOff').style.borderColor = 'var(--primary)';
+    document.getElementById('btnSimIP').style.borderColor = '';
+    document.getElementById('btnSimGlobal').style.borderColor = '';
+  } else {
+    localStorage.setItem('animifyai_sim_exhausted', mode);
+    const label = mode === 'global' ? '全局配额用完' : '个人配额用完';
+    document.getElementById('simStatus').textContent = '当前：模拟 ' + label;
+    document.getElementById('btnSimOff').style.borderColor = '';
+    document.getElementById('btnSimIP').style.borderColor = mode === 'ip' ? 'var(--primary)' : '';
+    document.getElementById('btnSimGlobal').style.borderColor = mode === 'global' ? 'var(--primary)' : '';
+  }
+  toast('模拟状态已更新。请刷新 EN/ZH 页面查看效果。', 'success');
+}
+// Init sim status
+(function(){
+  const mode = localStorage.getItem('animifyai_sim_exhausted');
+  if (mode) {
+    const label = mode === 'global' ? '全局配额用完' : '个人配额用完';
+    document.getElementById('simStatus').textContent = '当前：模拟 ' + label;
+    document.getElementById(mode === 'global' ? 'btnSimGlobal' : 'btnSimIP').style.borderColor = 'var(--primary)';
+  }
+})();
+
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast-msg ' + (type||'');
+  setTimeout(() => { el.textContent = ''; el.className = 'toast-msg'; }, 5000);
+}
+
+renderSliders();
+renderTransforms();
+renderBlogImages();
+updateOverviewStats();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 48" fill="none">
+  <circle cx="24" cy="24" r="22" fill="#8b7ec8"/>
+  <ellipse cx="24" cy="30" rx="10" ry="8" fill="#fff" opacity="0.9"/>
+  <circle cx="19" cy="20" r="3.5" fill="#fff"/><circle cx="19" cy="20" r="2" fill="#2d1f5e"/>
+  <circle cx="29" cy="20" r="3.5" fill="#fff"/><circle cx="29" cy="20" r="2" fill="#2d1f5e"/>
+  <circle cx="19" cy="19.5" r="0.8" fill="#fff"/>
+  <circle cx="29" cy="19.5" r="0.8" fill="#fff"/>
+  <line x1="24" y1="4" x2="24" y2="10" stroke="#d4a853" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="24" cy="3" r="2.5" fill="#d4a853"/>
+  <path d="M6 18 Q2 10 8 6" stroke="#8b7ec8" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M42 18 Q46 10 40 6" stroke="#8b7ec8" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <text x="56" y="34" font-family="'DM Serif Display',Georgia,serif" font-size="28" fill="#e8e0d0" letter-spacing="-0.5">Animify<tspan fill="#d4a853" font-weight="700">AI</tspan></text>
+</svg>

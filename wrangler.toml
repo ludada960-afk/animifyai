@@ -1,0 +1,6 @@
+name = "animifyai"
+pages_build_output_dir = "."
+
+[[kv_namespaces]]
+binding = "USAGE_KV"
+id = "32e017798ebc4e42a3a734cc4a611684"

@@ -1,0 +1,25 @@
+name = "animifyai-worker"
+main = "worker.js"
+compatibility_date = "2025-05-16"
+
+[vars]
+ENVIRONMENT = "production"
+# RunPod — set RUNPOD_ENDPOINT to your serverless endpoint ID (v2/<id>/runsync)
+# RUNPOD_ENDPOINT = ""
+
+[[kv_namespaces]]
+binding = "USAGE_KV"
+id = "32e017798ebc4e42a3a734cc4a611684"
+preview_id = "32e017798ebc4e42a3a734cc4a611684"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "animifyai-db"
+database_id = "de766d26-388a-4ea8-82f5-a9be69c426b0"
+
+[ai]
+binding = "AI"
+
+[[routes]]
+pattern = "animifyai.com/api/*"
+zone_name = "animifyai.com"

@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AnimifyAI — Free AI Anime Art Generator | Photo to Anime</title>
+<meta name="description" content="Transform your photos into stunning anime art for free. 6 styles including Ghibli, Shinkai, Ukiyo-e. Upload, click, download — instant AI anime conversion.">
+<link rel="canonical" href="https://animifyai.com/en/">
+<link rel="alternate" hreflang="en" href="https://animifyai.com/en/">
+<link rel="alternate" hreflang="zh" href="https://animifyai.com/zh/">
+<link rel="icon" type="image/png" href="/assets/images/mascot-clean.png">
+<link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
+<meta property="og:title" content="AnimifyAI — Free AI Anime Art Generator">
+<meta property="og:description" content="Transform photos into beautiful anime artwork with AI. Free to try, instant results.">
+<meta property="og:image" content="https://animifyai.com/assets/images/og-image.jpg">
+<meta property="og:url" content="https://animifyai.com/en/"><meta property="og:type" content="website">
+<link rel="stylesheet" href="/assets/css/style.css?v=10">
+<script>
+// Debug: check if custom showcase images exist in localStorage
+(function(){
+  var d = localStorage.getItem('animifyai_showcase');
+  if (d) {
+    try {
+      var p = JSON.parse(d);
+      var sc = (p.sliders||[]).filter(function(s){ return s.after && s.after.indexOf('data:')===0; }).length;
+      var tc = (p.transforms||[]).filter(function(t){ return t.bg && t.bg.indexOf('data:')===0; }).length;
+      if (sc+tc > 0) console.warn('AnimifyAI: ✅ 已加载 '+sc+' 个自定义滑块、'+tc+' 个风格图 ('+(d.length/1024).toFixed(1)+' KB)');
+      else console.warn('AnimifyAI: ⚠️ 有数据但无自定义图片（使用默认）');
+    } catch(e) { console.warn('AnimifyAI: ❌ 数据损坏 —', e.message); }
+  } else {
+    console.warn('AnimifyAI: ⚡ 无自定义展示图，使用默认。访问 /admin/ 上传。');
+  }
+})();
+</script>
+</head>
+<body>
+
+<!-- ═══ Header ═══ -->
+<header class="site-header"><div class="nav-inner">
+  <a href="/en/" class="logo-link"><img src="/assets/images/mascot-clean.png" alt="AnimifyAI" width="36" height="36">Animify<span>AI</span></a>
+  <button class="menu-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+  <ul class="nav-links">
+    <li><a href="#generator">Generator</a></li>
+    <li><a href="#showcase">Showcase</a></li>
+    <li><a href="#transformations">Styles</a></li>
+    <li><a href="/en/pricing/">Pricing</a></li>
+	    <li><a href="/en/blog/">Blog</a></li>
+    <li><a href="/zh/" class="lang-switch">中文</a></li>
+    <li><button class="theme-toggle" aria-label="Toggle theme">🌙</button></li>
+    <li class="auth-logged-out"><a href="#" class="nav-cta" onclick="showAuthModal('login');return false">Sign In</a></li>
+    <li class="auth-logged-in" style="display:none"><a href="#" onclick="logout();return false" style="font-size:.85rem">Logout (<span class="user-email"></span>)</a></li>
+  </ul>
+</div></header>
+
+<!-- ═══ Hero ═══ -->
+<section class="hero container" id="generator">
+  <div class="hero-top">
+    <div class="hero-badge"><span class="dot"></span> AI-Powered · 50K+ Images Created</div>
+    <h1>Turn Photos Into <span class="gradient-text">Anime Art</span> Instantly</h1>
+    <p>Upload any photo, pick an anime style, and let AI transform it in seconds. No design skills needed.</p>
+  </div>
+
+  <!-- Generator Card -->
+  <div class="generator-card" id="generatorCard">
+    <div class="gen-grid">
+      <!-- Upload Area -->
+      <div class="gen-upload-col">
+        <div class="upload-area" id="uploadArea">
+          <div class="upload-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+          <div class="upload-text">Drop image here or click to upload</div>
+          <div class="upload-hint">JPG, PNG, WebP · Max 10MB</div>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" style="display:none">
+      </div>
+
+      <!-- Controls Column -->
+      <div class="gen-ctrl-col">
+        <div class="style-selector">
+          <label>Choose Anime Style</label>
+          <div class="style-chips">
+            <button class="style-chip active" data-style="ghibli">🌿 Ghibli</button>
+            <button class="style-chip" data-style="shinkai">🌅 Shinkai</button>
+            <button class="style-chip" data-style="ukiyoe">🎨 Ukiyo-e</button>
+            <button class="style-chip" data-style="cyberpunk">🌃 Cyberpunk</button>
+            <button class="style-chip" data-style="watercolor">💧 Watercolor</button>
+            <button class="style-chip" data-style="chibi">🧸 Chibi</button>
+          </div>
+        </div>
+        <div class="gen-actions">
+          <button class="btn btn-accent btn-lg" id="generateBtn" onclick="generateImage()">✨ Generate Anime Art</button>
+          <span class="credits-badge"><strong>3</strong> free left</span>
+        </div>
+        <div class="sample-row">
+          <span class="label">Try sample:</span>
+          <div class="sample-thumb" onclick="loadSample('https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=512&h=512&fit=crop')"><img src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=80&h=80&fit=crop" alt="Portrait" loading="lazy"></div>
+          <div class="sample-thumb" onclick="loadSample('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=512&h=512&fit=crop')"><img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=80&h=80&fit=crop" alt="Beach" loading="lazy"></div>
+          <div class="sample-thumb" onclick="loadSample('https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=512&h=512&fit=crop')"><img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=80&h=80&fit=crop" alt="Cat" loading="lazy"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result Area (hidden until generation) -->
+    <div class="result-area" id="resultArea">
+      <div class="gen-loading" id="genLoading"><div class="spinner"></div><p>Creating anime art... (5-15s)</p></div>
+      <img class="result-image" id="resultImage" src="" alt="Generated anime art" style="display:none">
+      <div class="result-share" id="resultShare">
+        <span class="share-label">Share your creation:</span>
+        <button class="share-pill" onclick="shareTwitter()"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> Twitter</button>
+        <button class="share-pill" onclick="shareFacebook()"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Facebook</button>
+        <button class="share-pill" onclick="copyLink()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy Link</button>
+        <button class="share-pill primary" id="downloadBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download</button>
+        <button class="share-pill save" id="saveToGalleryBtn" onclick="saveToGallery()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg> Save to Gallery</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Trust Stats ═══ -->
+<div class="container"><div class="trust-row fade-in">
+  <div class="trust-item"><div class="num">50K+</div><div class="lbl">Images Created</div></div>
+  <div class="trust-item"><div class="num">6</div><div class="lbl">Anime Styles</div></div>
+  <div class="trust-item"><div class="num">~10s</div><div class="lbl">Generation Speed</div></div>
+  <div class="trust-item"><div class="num">4.8⭐</div><div class="lbl">User Rating</div></div>
+</div></div>
+
+<!-- ═══ Before/After Showcase ═══ -->
+<section class="section container" id="showcase">
+  <div class="section-header fade-in">
+    <span class="section-label">Before & After</span>
+    <h2 class="section-title">See the AI Magic in Action</h2>
+    <p class="section-desc">Real transformations by our users. Drag the slider to compare.</p>
+  </div>
+  <div class="showcase-grid">
+    <div class="showcase-card fade-in">
+      <div class="showcase-compare" data-slider="1">
+        <img class="sc-before" src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600&h=600&fit=crop" alt="Original portrait">
+        <img class="sc-after" src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600&h=600&fit=crop" alt="Ghibli style" style="filter:hue-rotate(30deg) saturate(1.5) contrast(1.1)">
+        <div class="sc-handle"></div>
+        <span class="sc-label sc-label-before">Original</span>
+        <span class="sc-label sc-label-after">Ghibli</span>
+      </div>
+      <div class="showcase-info"><span class="showcase-style">🌿 Ghibli Style</span><span>Portrait → Anime magic</span></div>
+    </div>
+    <div class="showcase-card fade-in">
+      <div class="showcase-compare" data-slider="2">
+        <img class="sc-before" src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=600&fit=crop" alt="Original beach">
+        <img class="sc-after" src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=600&fit=crop" alt="Shinkai style" style="filter:hue-rotate(180deg) saturate(1.8) brightness(1.2)">
+        <div class="sc-handle"></div>
+        <span class="sc-label sc-label-before">Original</span>
+        <span class="sc-label sc-label-after">Shinkai</span>
+      </div>
+      <div class="showcase-info"><span class="showcase-style">🌅 Shinkai Style</span><span>Landscape → Cinematic sky</span></div>
+    </div>
+    <div class="showcase-card fade-in">
+      <div class="showcase-compare" data-slider="3">
+        <img class="sc-before" src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600&h=600&fit=crop" alt="Original cat">
+        <img class="sc-after" src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600&h=600&fit=crop" alt="Chibi style" style="filter:hue-rotate(300deg) saturate(1.6) brightness(1.15)">
+        <div class="sc-handle"></div>
+        <span class="sc-label sc-label-before">Original</span>
+        <span class="sc-label sc-label-after">Chibi</span>
+      </div>
+      <div class="showcase-info"><span class="showcase-style">🧸 Chibi Style</span><span>Pet → Kawaii character</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ My Gallery (logged-in users) ═══ -->
+<section class="section container" id="myGallery" style="display:none">
+  <div class="section-header fade-in">
+    <span class="section-label">My Gallery</span>
+    <h2 class="section-title">Your Anime Creations</h2>
+    <p class="section-desc" id="galleryLoginPrompt">Sign in to save and view your generated artwork.</p>
+  </div>
+  <div class="gallery-grid" id="galleryGrid"></div>
+</section>
+
+<!-- ═══ Style Transformations (liftapp.ai pattern) ═══ -->
+<section class="section container" id="transformations">
+  <div class="section-header fade-in">
+    <span class="section-label">Style Transformations</span>
+    <h2 class="section-title">One Photo, Endless Anime Styles</h2>
+    <p class="section-desc">See how AnimifyAI transforms ordinary photos into stunning anime artwork. Each style creates a completely unique artistic interpretation — powered by advanced AI trained on anime aesthetics.</p>
+  </div>
+
+  <!-- Ghibli: image left, content right -->
+  <div class="tf-row fade-in">
+    <div class="tf-visual">
+      <div class="tf-anime-card">
+        <img class="tf-anime-bg" src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&h=600&fit=crop" alt="AI-generated Studio Ghibli style anime scene — warm watercolor landscape" loading="lazy" draggable="false">
+        <div class="tf-original-inset">
+          <img src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=280&h=280&fit=crop" alt="Original photo before AI transformation" loading="lazy" draggable="false">
+          <div class="tf-inset-label">Your Photo</div>
+        </div>
+      </div>
+    </div>
+    <div class="tf-content">
+      <span class="tf-badge">Most Popular</span>
+      <h3>Studio Ghibli — Warm & Dreamy</h3>
+      <p>Inspired by Hayao Miyazaki's legendary animation studio. This style uses warm watercolor tones, soft hand-painted textures, and a gentle nostalgic atmosphere that turns every photo into a slice of anime magic.</p>
+      <ul class="tf-steps">
+        <li><span class="tf-step-icon">🎨</span><div class="tf-step-content"><strong>Warm watercolor palette</strong><span>Soft, earthy tones reminiscent of hand-painted animation cels</span></div></li>
+        <li><span class="tf-step-icon">🖌️</span><div class="tf-step-content"><strong>Hand-painted brush texture</strong><span>Delicate strokes and organic edges for an authentic feel</span></div></li>
+        <li><span class="tf-step-icon">✨</span><div class="tf-step-content"><strong>Dreamy nostalgic atmosphere</strong><span>Gentle lighting that captures the wonder of Miyazaki's worlds</span></div></li>
+      </ul>
+      <a href="#generator" class="btn btn-accent" onclick="selectStyleAndScroll('ghibli');return false">Try Ghibli Style →</a>
+    </div>
+  </div>
+
+  <!-- Shinkai: content left, image right -->
+  <div class="tf-row fade-in">
+    <div class="tf-content">
+      <span class="tf-badge">Cinematic Beauty</span>
+      <h3>Makoto Shinkai — Luminous & Radiant</h3>
+      <p>Named after the visionary director behind <em>Your Name</em> and <em>Weathering With You</em>. This style bathes your photos in luminous skies, vivid cinematic lighting, and breathtaking color gradients that make every image feel like a movie poster.</p>
+      <ul class="tf-steps">
+        <li><span class="tf-step-icon">🌅</span><div class="tf-step-content"><strong>Cinematic lighting & lens flares</strong><span>Dramatic light rays and sun flares for epic atmosphere</span></div></li>
+        <li><span class="tf-step-icon">🌈</span><div class="tf-step-content"><strong>Vibrant sky gradients</strong><span>Rich color transitions from golden hour to twilight blues</span></div></li>
+        <li><span class="tf-step-icon">💫</span><div class="tf-step-content"><strong>Deep emotional atmosphere</strong><span>Every image carries the emotional weight of a Shinkai film</span></div></li>
+      </ul>
+      <a href="#generator" class="btn btn-accent" onclick="selectStyleAndScroll('shinkai');return false">Try Shinkai Style →</a>
+    </div>
+    <div class="tf-visual">
+      <div class="tf-anime-card">
+        <img class="tf-anime-bg" src="https://images.unsplash.com/photo-1536514492776-4a2c70d0a397?w=600&h=600&fit=crop" alt="AI-generated Makoto Shinkai style anime scene — cinematic sky" loading="lazy" draggable="false">
+        <div class="tf-original-inset">
+          <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=280&h=280&fit=crop" alt="Original beach photo before AI transformation" loading="lazy" draggable="false">
+          <div class="tf-inset-label">Your Photo</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ukiyo-e: image left, content right -->
+  <div class="tf-row fade-in">
+    <div class="tf-visual">
+      <div class="tf-anime-card">
+        <img class="tf-anime-bg" src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&h=600&fit=crop" alt="AI-generated Ukiyo-e woodblock print anime style — traditional Japanese art" loading="lazy" draggable="false">
+        <div class="tf-original-inset">
+          <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=280&h=280&fit=crop" alt="Original photo before woodblock print transformation" loading="lazy" draggable="false">
+          <div class="tf-inset-label">Your Photo</div>
+        </div>
+      </div>
+    </div>
+    <div class="tf-content">
+      <span class="tf-badge">Traditional Art</span>
+      <h3>Ukiyo-e — Bold & Timeless</h3>
+      <p>Step back into Edo-period Japan. The Ukiyo-e style transforms your photos with bold black outlines, flat vibrant color blocks, and dramatic compositions inspired by masters like Hokusai and Hiroshige. Every image becomes a modern woodblock print — graphic, powerful, and unmistakably Japanese.</p>
+      <ul class="tf-steps">
+        <li><span class="tf-step-icon">🖋️</span><div class="tf-step-content"><strong>Bold sumi outlines</strong><span>Confident black strokes that define every form with graphic clarity</span></div></li>
+        <li><span class="tf-step-icon">🎨</span><div class="tf-step-content"><strong>Flat color blocks</strong><span>Indigo blue, vermilion red, and ochre yellow — the classic woodblock palette</span></div></li>
+        <li><span class="tf-step-icon">🏯</span><div class="tf-step-content"><strong>Timeless Japanese aesthetic</strong><span>Centuries of artistic tradition reimagined through AI</span></div></li>
+      </ul>
+      <a href="#generator" class="btn btn-accent" onclick="selectStyleAndScroll('ukiyoe');return false">Try Ukiyo-e Style →</a>
+    </div>
+  </div>
+
+  <!-- Cyberpunk: content left, image right -->
+  <div class="tf-row fade-in">
+    <div class="tf-content">
+      <span class="tf-badge">Fan Favorite</span>
+      <h3>Cyberpunk — Neon & Futuristic</h3>
+      <p>Step into a neon-lit future. The Cyberpunk style transforms your photos with electric purple and cyan glow, high-contrast shadows, and a moody sci-fi atmosphere inspired by <em>Ghost in the Shell</em> and <em>Akira</em>.</p>
+      <ul class="tf-steps">
+        <li><span class="tf-step-icon">💜</span><div class="tf-step-content"><strong>Neon purple & cyan glow</strong><span>Electric color palette that defines the cyberpunk aesthetic</span></div></li>
+        <li><span class="tf-step-icon">🌑</span><div class="tf-step-content"><strong>High-contrast dramatic lighting</strong><span>Deep shadows and bright neon highlights for maximum impact</span></div></li>
+        <li><span class="tf-step-icon">🔮</span><div class="tf-step-content"><strong>Dystopian sci-fi mood</strong><span>Futuristic atmosphere that turns photos into anime noir</span></div></li>
+      </ul>
+      <a href="#generator" class="btn btn-accent" onclick="selectStyleAndScroll('cyberpunk');return false">Try Cyberpunk Style →</a>
+    </div>
+    <div class="tf-visual">
+      <div class="tf-anime-card">
+        <img class="tf-anime-bg" src="https://images.unsplash.com/photo-1515634928627-2a4e0dae3ddf?w=600&h=600&fit=crop" alt="AI-generated Cyberpunk anime style — neon futuristic city" loading="lazy" draggable="false">
+        <div class="tf-original-inset">
+          <img src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=280&h=280&fit=crop" alt="Original portrait before cyberpunk transformation" loading="lazy" draggable="false">
+          <div class="tf-inset-label">Your Photo</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Watercolor: image left, content right -->
+  <div class="tf-row fade-in">
+    <div class="tf-visual">
+      <div class="tf-anime-card">
+        <img class="tf-anime-bg" src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=600&fit=crop" alt="AI-generated watercolor anime style — soft dreamy landscape" loading="lazy" draggable="false">
+        <div class="tf-original-inset">
+          <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=280&h=280&fit=crop" alt="Original photo before watercolor transformation" loading="lazy" draggable="false">
+          <div class="tf-inset-label">Your Photo</div>
+        </div>
+      </div>
+    </div>
+    <div class="tf-content">
+      <span class="tf-badge">Artistic & Soft</span>
+      <h3>Watercolor — Ethereal & Romantic</h3>
+      <p>Watch your photos dissolve into delicate watercolor washes. The Watercolor style applies soft pastel tones, flowing brush strokes, and dreamy color bleeds that make every image feel like a hand-painted illustration. Perfect for romantic portraits, wedding photos, and nature scenes you want to fill with gentle emotion.</p>
+      <ul class="tf-steps">
+        <li><span class="tf-step-icon">🖌️</span><div class="tf-step-content"><strong>Soft pastel washes</strong><span>Delicate color transitions that mimic wet-on-wet watercolor technique</span></div></li>
+        <li><span class="tf-step-icon">🌸</span><div class="tf-step-content"><strong>Flowing brush strokes</strong><span>Organic, hand-crafted feel with visible brush texture</span></div></li>
+        <li><span class="tf-step-icon">💫</span><div class="tf-step-content"><strong>Dreamy romantic atmosphere</strong><span>Ethereal quality perfect for emotional, intimate images</span></div></li>
+      </ul>
+      <a href="#generator" class="btn btn-accent" onclick="selectStyleAndScroll('watercolor');return false">Try Watercolor Style →</a>
+    </div>
+  </div>
+
+  <!-- Chibi: content left, image right -->
+  <div class="tf-row fade-in">
+    <div class="tf-content">
+      <span class="tf-badge">Kawaii Magic</span>
+      <h3>Chibi — Cute & Adorable</h3>
+      <p>Turn any photo into pure kawaii goodness. The Chibi style shrinks proportions, enlarges eyes, and wraps everything in a soft pink glow that's irresistibly cute. Pets become anime mascots, family photos turn into collectible character cards.</p>
+      <ul class="tf-steps">
+        <li><span class="tf-step-icon">👁️</span><div class="tf-step-content"><strong>Signature big sparkling eyes</strong><span>Exaggerated features that define the chibi art form</span></div></li>
+        <li><span class="tf-step-icon">🧸</span><div class="tf-step-content"><strong>Tiny cute body proportions</strong><span>Adorable miniaturized figures with oversized heads</span></div></li>
+        <li><span class="tf-step-icon">💖</span><div class="tf-step-content"><strong>Soft pink kawaii palette</strong><span>Pastel tones and gentle glow for maximum cuteness</span></div></li>
+      </ul>
+      <a href="#generator" class="btn btn-accent" onclick="selectStyleAndScroll('chibi');return false">Try Chibi Style →</a>
+    </div>
+    <div class="tf-visual">
+      <div class="tf-anime-card">
+        <img class="tf-anime-bg" src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=600&h=600&fit=crop" alt="AI-generated Chibi kawaii anime style — cute illustration" loading="lazy" draggable="false">
+        <div class="tf-original-inset">
+          <img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=280&h=280&fit=crop" alt="Original pet photo before chibi transformation" loading="lazy" draggable="false">
+          <div class="tf-inset-label">Your Photo</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ How It Works ═══ -->
+<section class="section container">
+  <div class="section-header fade-in">
+    <span class="section-label">How It Works</span>
+    <h2 class="section-title">3 Simple Steps to Anime Art</h2>
+  </div>
+  <div class="steps-grid">
+    <div class="step-card fade-in"><div class="step-number">1</div><h3>Upload Your Photo</h3><p>Any portrait, landscape, or pet photo works great. Just drag, drop, or click to upload.</p></div>
+    <div class="step-card fade-in"><div class="step-number">2</div><h3>Pick an Anime Style</h3><p>Choose from 6 curated anime styles. Each one creates a completely unique artistic look.</p></div>
+    <div class="step-card fade-in"><div class="step-number">3</div><h3>Download & Share</h3><p>Your anime art is ready in seconds. Download in high quality or share directly to social media.</p></div>
+  </div>
+</section>
+
+<!-- ═══ Testimonials ═══ -->
+<section class="section container">
+  <div class="section-header fade-in">
+    <span class="section-label">User Reviews</span>
+    <h2 class="section-title">Loved by Creators Worldwide</h2>
+  </div>
+  <div class="testimonials-grid">
+    <div class="testimonial-card fade-in">
+      <div class="testimonial-header">
+        <img class="testimonial-avatar" src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop&crop=face" alt="Sarah" loading="lazy">
+        <div><div class="stars">★★★★★</div><div class="author">Sarah K.</div><div class="author-role">Illustrator, USA</div></div>
+      </div>
+      <p>"The Ghibli style blew my mind. My vacation photos now look like they came straight from a Miyazaki film. I show them to everyone!"</p>
+    </div>
+    <div class="testimonial-card fade-in">
+      <div class="testimonial-header">
+        <img class="testimonial-avatar" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&crop=face" alt="Mike" loading="lazy">
+        <div><div class="stars">★★★★★</div><div class="author">Mike T.</div><div class="author-role">Content Creator, UK</div></div>
+      </div>
+      <p>"I create TikTok content with these before/after anime transformations and the engagement is insane. This tool is an absolute goldmine."</p>
+    </div>
+    <div class="testimonial-card fade-in">
+      <div class="testimonial-header">
+        <img class="testimonial-avatar" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop&crop=face" alt="Yuki" loading="lazy">
+        <div><div class="stars">★★★★★</div><div class="author">Yuki M.</div><div class="author-role">Student, Japan</div></div>
+      </div>
+      <p>"Turned my cat into a chibi character for my profile picture. My friends won't stop asking how I did it. This is the best anime AI tool!"</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FAQ ═══ -->
+<section class="section container" id="faq">
+  <div class="section-header fade-in"><span class="section-label">FAQ</span><h2 class="section-title">Frequently Asked Questions</h2></div>
+  <div class="faq-list">
+    <div class="faq-item fade-in"><button class="faq-q">Is AnimifyAI really free?<span class="arrow">▼</span></button><div class="faq-a">New users get a free trial with all 6 anime styles — no credit card needed. After that, plans start at $5.90/month for 150 credits, or grab a one-time pack of 50 credits for $3.90.</div></div>
+    <div class="faq-item fade-in"><button class="faq-q">What photos work best?<span class="arrow">▼</span></button><div class="faq-a">Portraits, pet photos, and landscapes produce the best results. Use well-lit, clear images at 512×512 pixels or larger. Avoid heavily filtered or very dark photos.</div></div>
+    <div class="faq-item fade-in"><button class="faq-q">How long does generation take?<span class="arrow">▼</span></button><div class="faq-a">Most images complete in 5–15 seconds. Premium users get priority queue for faster processing during peak times.</div></div>
+    <div class="faq-item fade-in"><button class="faq-q">Are my photos stored?<span class="arrow">▼</span></button><div class="faq-a">Never. Photos are processed in real-time and immediately discarded. We never store, share, or use your original images.</div></div>
+    <div class="faq-item fade-in"><button class="faq-q">Can I use images commercially?<span class="arrow">▼</span></button><div class="faq-a">Free-tier images are for personal use. Basic & Premium subscribers get full commercial license for all generated artwork.</div></div>
+    <div class="faq-item fade-in"><button class="faq-q">What's the difference between the 6 styles?<span class="arrow">▼</span></button><div class="faq-a">Ghibli = warm hand-painted, Shinkai = luminous cinematic, Ukiyo-e = woodblock prints, Cyberpunk = neon futuristic, Watercolor = soft ethereal, Chibi = adorable kawaii characters.</div></div>
+  </div>
+</section>
+
+<!-- ═══ CTA ═══ -->
+<section class="section container"><div class="cta-section fade-in">
+  <h2>Ready to Anime-fy Your Photos?</h2>
+  <p>Join thousands of creators. free trial, no sign-up required.</p>
+  <a href="#generator" class="btn btn-accent btn-lg">✨ Start Creating — It's Free</a>
+</div></section>
+
+<!-- ═══ Footer ═══ -->
+<footer class="site-footer"><div class="footer-inner"><div class="footer-grid">
+  <div class="footer-brand"><a href="/en/" class="logo-link"><img src="/assets/images/mascot-clean.png" alt="AnimifyAI" width="32" height="32">Animify<span>AI</span></a><p>AI-powered anime art generator. Transform any photo into stunning anime artwork in seconds.</p></div>
+  <div class="footer-col"><h4>Product</h4><a href="/en/#generator">Generator</a><a href="/en/pricing/">Pricing</a><a href="/en/about/">About</a></div>
+  <div class="footer-col"><h4>Styles</h4><a href="/en/styles/ghibli/">Ghibli</a><a href="/en/styles/shinkai/">Shinkai</a><a href="/en/styles/cyberpunk/">Cyberpunk</a></div>
+  <div class="footer-col"><h4>Legal</h4><a href="/en/privacy/">Privacy Policy</a><a href="/en/terms/">Terms of Service</a><a href="mailto:ludada960@gmail.com">Contact</a></div>
+</div><div class="footer-bottom">&copy; 2026 AnimifyAI. All rights reserved.</div></div></footer>
+
+<!-- ═══ Auth Modal ═══ -->
+<div class="modal-overlay" id="authModal"><div class="modal-box auth-box">
+  <button class="close-btn" onclick="closeModal('authModal')">✕</button>
+  <h2>Sign in to AnimifyAI</h2>
+  <p class="modal-subtitle">Save your creations & unlock gallery</p>
+  <button class="btn-social btn-google" onclick="signInWithGoogle()">
+    <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+    Continue with Google
+  </button>
+  <button class="btn-social btn-github" onclick="loginWithGitHub()">
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    Continue with GitHub
+  </button>
+  <div class="divider">or use email</div>
+  <form onsubmit="handleAuth(event)">
+    <input type="email" id="authEmail" placeholder="Email address" required style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:.9rem;color:var(--text);background:var(--surface-alt);margin-bottom:10px">
+    <input type="password" id="authPassword" placeholder="Password" required style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:.9rem;color:var(--text);background:var(--surface-alt);margin-bottom:12px">
+    <button type="submit" class="btn btn-primary auth-submit" style="width:100%;padding:12px;font-size:.92rem">Sign in with Email</button>
+  </form>
+  <div class="form-footer">Don't have an account? <a href="#" onclick="showAuthModal('register');return false">Sign up here</a></div>
+</div></div>
+
+<!-- ═══ Paywall Modal ═══ -->
+<div class="modal-overlay" id="paywallModal"><div class="modal-box">
+  <button class="close-btn" onclick="closeModal('paywallModal')">✕</button>
+  <div class="paywall-content">
+    <img src="/assets/images/mascot-clean.png" alt="" class="mascot">
+    <h2>You've Used Your Free Trial!</h2>
+    <p>Choose a plan to keep creating:</p>
+    <div class="paywall-plans">
+      <div class="paywall-plan featured" onclick="selectPlan('basic')">
+        <div class="plan-info"><div class="plan-name">Basic</div><div class="plan-desc">150 credits/month · HD · Commercial</div></div>
+        <div class="plan-price">$5.90<small>/mo</small></div>
+      </div>
+      <div class="paywall-plan" onclick="selectPlan('basic_annual')">
+        <div class="plan-info"><div class="plan-name">Basic Annual <span class="best-value">Save $11.80</span></div><div class="plan-desc">150 credits/month · HD · Commercial</div></div>
+        <div class="plan-price">$59<small>/yr</small><span class="plan-sub">$4.92/mo</span></div>
+      </div>
+      <div class="paywall-plan featured" onclick="selectPlan('premium')">
+        <div class="plan-info"><div class="plan-name">Premium</div><div class="plan-desc">500 credits/month · 4K · Priority</div></div>
+        <div class="plan-price">$11.90<small>/mo</small></div>
+      </div>
+      <div class="paywall-plan" onclick="selectPlan('premium_annual')">
+        <div class="plan-info"><div class="plan-name">Premium Annual <span class="best-value">Save $23.80</span></div><div class="plan-desc">500 credits/month · 4K · Priority</div></div>
+        <div class="plan-price">$119<small>/yr</small><span class="plan-sub">$9.92/mo</span></div>
+      </div>
+    </div>
+    <div class="paywall-packs">
+      <div class="paywall-plan pack" onclick="selectPlan('pack50')"><div class="plan-info"><div class="plan-name">50 Credits</div><div class="plan-desc">One-time · Never expires</div></div><div class="plan-price">$3.90</div></div>
+      <div class="paywall-plan pack" onclick="selectPlan('pack150')"><div class="plan-info"><div class="plan-name">150 Credits</div><div class="plan-desc">One-time · Never expires</div></div><div class="plan-price">$8.90</div></div>
+    </div>
+    <p style="font-size:.8rem;color:var(--text-muted);margin-top:12px">Pay with card or PayPal · Cancel anytime</p>
+  </div>
+</div></div>
+
+<script src="/assets/js/main.js?v=29"></script>
+</body></html>

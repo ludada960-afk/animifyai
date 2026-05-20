@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Showcase Manager — AnimifyAI Admin</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" type="image/png" href="/assets/images/mascot-clean.png">
+<link rel="stylesheet" href="/assets/css/style.css?v=8">
+<style>
+body{background:var(--surface-alt)}
+.admin-hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 0}
+.admin-hdr .nav-inner{display:flex;align-items:center;justify-content:space-between}
+.admin-hdr h1{font-size:1.2rem;font-weight:800;display:flex;align-items:center;gap:8px}
+.admin-hdr h1 span{background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.tabs{display:flex;gap:4px;margin:28px 0 20px}
+.tab-btn{padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-family:inherit;font-size:.84rem;font-weight:600;cursor:pointer;color:var(--text-secondary);transition:all .15s}
+.tab-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.panel{display:none}.panel.active{display:block}
+.save-btn{display:block;margin:28px auto 0;padding:14px 40px;background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;border:none;border-radius:var(--radius);font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;transition:all .2s var(--bounce)}
+.save-btn:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(108,92,231,.4)}
+.toast-msg{text-align:center;margin-top:10px;font-size:.85rem;font-weight:500;min-height:24px}
+.toast-msg.success{color:#00B894}.toast-msg.error{color:#DC2626}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm)}
+.card h4{font-size:.95rem;font-weight:700;margin-bottom:14px;color:var(--text)}
+.card .preview-row{display:flex;gap:12px;margin-bottom:14px}
+.card .preview-col{flex:1;text-align:center}
+.card .preview-col img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--radius-sm);background:var(--surface-alt);border:1px solid var(--border-light)}
+.card .preview-col .lbl{font-size:.72rem;color:var(--text-muted);margin-top:4px;font-weight:600}
+.card .field-row{margin-top:8px}
+.card .field-row label{display:block;font-size:.74rem;font-weight:600;color:var(--text-secondary);margin-bottom:4px}
+.card .field-row input[type=file]{width:100%;font-size:.76rem;padding:7px;border:1px dashed var(--border);border-radius:8px;background:var(--surface-alt);cursor:pointer}
+.card .field-row input[type=text]{width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:.78rem;background:var(--surface-alt);color:var(--text);font-family:inherit}
+.grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px}
+.help-box{background:rgba(108,92,231,.06);border:1px solid rgba(108,92,231,.15);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;font-size:.84rem;color:var(--text-secondary);line-height:1.6}
+.help-box strong{color:var(--primary)}
+</style>
+</head>
+<body>
+
+<header class="admin-hdr">
+  <div class="nav-inner container">
+    <h1>Animify<span>AI</span> — Showcase Manager</h1>
+    <div style="display:flex;gap:8px">
+      <a href="/admin/" class="btn btn-secondary" style="font-size:.8rem;padding:6px 14px">CMS Admin</a>
+      <a href="/en/" class="btn btn-secondary" style="font-size:.8rem;padding:6px 14px">View EN</a>
+      <a href="/zh/" class="btn btn-secondary" style="font-size:.8rem;padding:6px 14px">View ZH</a>
+    </div>
+  </div>
+</header>
+
+<main class="container admin-section">
+  <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:4px">Manage Showcase Images</h2>
+  <p style="color:var(--text-muted);font-size:.88rem;margin-bottom:16px">Upload real AI-generated anime images for the compare sliders and style transformation sections. All images are saved to browser localStorage and will appear across both EN and ZH pages.</p>
+
+  <div class="help-box">
+    <strong>How to get matching before/after images:</strong><br>
+    1. Go to the <a href="/en/#generator" target="_blank">generator</a>, upload a photo, generate anime art<br>
+    2. Download the result and save both the original and generated images<br>
+    3. Come back here and upload each pair for the corresponding style<br>
+    4. Click <strong>Save All</strong> — the site will instantly use your real AI-generated images
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('sliders')">Compare Sliders (3)</button>
+    <button class="tab-btn" onclick="switchTab('transforms')">Style Transformations (4)</button>
+  </div>
+
+  <!-- Sliders Panel -->
+  <div class="panel active" id="panel-sliders">
+    <div class="grid2" id="sliderGrid"></div>
+  </div>
+
+  <!-- Transformations Panel -->
+  <div class="panel" id="panel-transforms">
+    <div class="grid2" id="transformGrid"></div>
+  </div>
+
+  <button class="save-btn" onclick="saveAll()">Save All Changes</button>
+  <div class="toast-msg" id="toast"></div>
+</main>
+
+<script>
+const KEY = 'animifyai_showcase';
+
+const DEFAULTS = {
+  sliders: [
+    { id:'ghibli', title:'Ghibli Style', desc:'Portrait → Anime magic',
+      before:'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600&h=400&fit=crop',
+      after:'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600&h=400&fit=crop',
+      filter:'hue-rotate(30deg) saturate(1.5) contrast(1.1)',
+      beforeLabel:'Original', afterLabel:'Ghibli' },
+    { id:'shinkai', title:'Shinkai Style', desc:'Landscape → Cinematic sky',
+      before:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=400&fit=crop',
+      after:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=400&fit=crop',
+      filter:'hue-rotate(180deg) saturate(1.8) brightness(1.2)',
+      beforeLabel:'Original', afterLabel:'Shinkai' },
+    { id:'chibi', title:'Chibi Style', desc:'Pet → Kawaii character',
+      before:'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600&h=400&fit=crop',
+      after:'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600&h=400&fit=crop',
+      filter:'hue-rotate(300deg) saturate(1.6) brightness(1.15)',
+      beforeLabel:'Original', afterLabel:'Chibi' }
+  ],
+  transforms: [
+    { id:'ghibli', title:'Studio Ghibli',
+      bg:'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=500&h=500&fit=crop',
+      inset:'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=200&h=200&fit=crop' },
+    { id:'shinkai', title:'Makoto Shinkai',
+      bg:'https://images.unsplash.com/photo-1536514492776-4a2c70d0a397?w=500&h=500&fit=crop',
+      inset:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=200&h=200&fit=crop' },
+    { id:'cyberpunk', title:'Cyberpunk',
+      bg:'https://images.unsplash.com/photo-1515634928627-2a4e0dae3ddf?w=500&h=500&fit=crop',
+      inset:'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&h=200&fit=crop' },
+    { id:'chibi', title:'Chibi',
+      bg:'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=500&h=500&fit=crop',
+      inset:'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200&h=200&fit=crop' }
+  ]
+};
+
+let data = JSON.parse(JSON.stringify(DEFAULTS));
+try { const s = localStorage.getItem(KEY); if (s) { const p = JSON.parse(s); data.sliders = p.sliders || data.sliders; data.transforms = p.transforms || data.transforms; } } catch(e) {}
+
+function toBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+// Render sliders
+function renderSliders() {
+  document.getElementById('sliderGrid').innerHTML = data.sliders.map((s, i) => `
+    <div class="card">
+      <h4>${s.title} — Before/After</h4>
+      <div class="preview-row">
+        <div class="preview-col">
+          <img src="${s.before}" alt="Before">
+          <div class="lbl">Before (${s.beforeLabel})</div>
+        </div>
+        <div class="preview-col">
+          <img src="${s.after}" alt="After" style="filter:${s.filter||'none'}">
+          <div class="lbl">After (${s.afterLabel})</div>
+        </div>
+      </div>
+      <div class="field-row"><label>Before — Original Photo</label><input type="file" accept="image/*" onchange="uploadSlider(${i},'before',this)"></div>
+      <div class="field-row"><label>After — AI-Generated Anime Result <span style="color:var(--primary);font-weight:700">(REQUIRED)</span></label><input type="file" accept="image/*" onchange="uploadSlider(${i},'after',this)"></div>
+      <div class="field-row"><label>After — CSS Filter (only used if no real image uploaded)</label><input type="text" value="${s.filter||''}" onchange="data.sliders[${i}].filter=this.value" placeholder="e.g. hue-rotate(30deg) saturate(1.5)"></div>
+    </div>
+  `).join('');
+}
+
+// Render transforms
+function renderTransforms() {
+  document.getElementById('transformGrid').innerHTML = data.transforms.map((t, i) => `
+    <div class="card">
+      <h4>${t.title} — Style Row</h4>
+      <div class="preview-row">
+        <div class="preview-col">
+          <img src="${t.bg}" alt="Anime background">
+          <div class="lbl">Anime Background</div>
+        </div>
+        <div class="preview-col">
+          <img src="${t.inset}" alt="Original inset">
+          <div class="lbl">Original Photo Inset</div>
+        </div>
+      </div>
+      <div class="field-row"><label>Anime Background Image <span style="color:var(--primary);font-weight:700">(REQUIRED)</span></label><input type="file" accept="image/*" onchange="uploadTransform(${i},'bg',this)"></div>
+      <div class="field-row"><label>Original Photo Inset</label><input type="file" accept="image/*" onchange="uploadTransform(${i},'inset',this)"></div>
+    </div>
+  `).join('');
+}
+
+function uploadSlider(idx, field, input) {
+  const f = input.files[0]; if (!f) return;
+  toBase64(f).then(b64 => {
+    data.sliders[idx][field] = b64;
+    if (field === 'after') data.sliders[idx].filter = '';
+    renderSliders();
+    toast('Preview updated — click Save All to apply', 'success');
+  });
+}
+
+function uploadTransform(idx, field, input) {
+  const f = input.files[0]; if (!f) return;
+  toBase64(f).then(b64 => {
+    data.transforms[idx][field] = b64;
+    renderTransforms();
+    toast('Preview updated — click Save All to apply', 'success');
+  });
+}
+
+function saveAll() {
+  localStorage.setItem(KEY, JSON.stringify(data));
+  toast('All images saved! Site now uses your real AI-generated images on both EN and ZH pages.', 'success');
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`[onclick="switchTab('${name}')"]`).classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast-msg ' + (type||'');
+  setTimeout(() => { el.textContent = ''; el.className = 'toast-msg'; }, 5000);
+}
+
+renderSliders();
+renderTransforms();
+</script>
+</body>
+</html>
