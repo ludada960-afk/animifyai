@@ -1,4 +1,4 @@
-/* AnimifyAI — v29: login gate before free generation, free trial messaging */
+/* AnimifyAI — v30: Creem payment integration, RunPod ready */
 const CONFIG = {
   workerURL: '', // same-domain via Pages Functions proxy (no workers.dev blocking)
   maxFreeUses: 3,
@@ -49,7 +49,7 @@ function initAuth() {
   const urlParams = new URLSearchParams(window.location.search);
   const ghCode = urlParams.get('code');
   if (ghCode) { window.history.replaceState({}, '', location.pathname); handleGitHubCallback(ghCode); }
-  if (urlParams.get('payment') === 'success') { window.history.replaceState({}, '', location.pathname); handlePayPalReturn(); }
+  if (urlParams.get('payment') === 'success') { window.history.replaceState({}, '', location.pathname); window.location.replace('/en/payment/success/'); }
   if (CONFIG.googleClientId) {
     const s = document.createElement('script');
     s.src = 'https://accounts.google.com/gsi/client';
@@ -712,27 +712,16 @@ function showPaywall() { document.getElementById('paywallModal')?.classList.add(
 
 async function selectPlan(plan) {
   closeModal('paywallModal');
+  showToast('Redirecting to checkout...', 'info');
   const email = state.user?.email || '';
   try {
-    const r = await fetch(CONFIG.workerURL + '/api/paypal/order', {
+    const r = await fetch(CONFIG.workerURL + '/api/creem/checkout', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ plan, email })
     });
     const d = await r.json();
-    if (d.approveUrl) {
-      sessionStorage.setItem('paypal_plan', plan);
-      sessionStorage.setItem('paypal_order', d.orderID);
-      sessionStorage.setItem('paypal_email', email);
-      window.location.href = d.approveUrl;
-      return;
-    }
-    const sr = await fetch(CONFIG.workerURL + '/api/checkout', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ plan, email })
-    });
-    const sd = await sr.json();
-    if (sd.url) window.location.href = sd.url;
-    else showToast(sd.error || d.error || 'Payment unavailable', 'error');
+    if (d.url) window.location.href = d.url;
+    else showToast(d.error || 'Payment unavailable', 'error');
   } catch { showToast('Could not connect to payment', 'error'); }
 }
 

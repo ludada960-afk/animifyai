@@ -1,5 +1,5 @@
 /**
- * AnimifyAI Worker v21 — RunPod Animagine XL 4.0 + CF Klein fallback
+ * AnimifyAI Worker v22 — Creem checkout + webhook + RunPod support
  */
 const CONFIG = {
   LIFETIME_FREE: 2,
@@ -17,6 +17,14 @@ const CONFIG = {
   },
   IMG_KV_TTL: 86400 * 30,
   // RunPod endpoint ID — set via env.RUNPOD_ENDPOINT (v2/{id}/runsync)
+  CREEM_PRODUCTS: {
+    basic:          'prod_15vtLeYfyG7nI6BcgmhJjz',
+    basic_annual:   'prod_4UDix7fH3EoZ1X1YUToeVY',
+    premium:        'prod_37cqIHXOc1XaYUZ2RJkOWR',
+    premium_annual: 'prod_2u8P2miwKwVG09NhV5XfGe',
+    pack50:         'prod_1WfKoUJ7Hk0R9EiuTcJC0E',
+    pack150:        'prod_ocWNlUKX6OhhTldacJXHV',
+  },
 };
 
 const STYLE_PROMPTS = {
@@ -638,6 +646,90 @@ async function handlePayPalCapture(req, env) {
   } catch (e) { return json({ error: e.message }, 503, req); }
 }
 
+/* ═══ Creem ═══ */
+function creemSecret(env) {
+  return (env && env.CREEM_SECRET) || 'creem_4qfekyg7KdpuBknKg739KO';
+}
+
+function creemSig(env) {
+  return (env && env.CREEM_WEBHOOK_SECRET) || '';
+}
+
+async function handleCreemCheckout(req, env) {
+  try {
+    let body;
+    try { body = await req.json(); } catch { return json({ error: 'Invalid' }, 400, req); }
+    const { plan, email } = body;
+    if (!plan || !CONFIG.PLANS[plan]) return json({ error: 'Invalid plan' }, 400, req);
+    const pid = CONFIG.CREEM_PRODUCTS[plan];
+    if (!pid) return json({ error: 'No product mapping' }, 400, req);
+
+    const r = await fetch('https://api.creem.io/v1/checkouts', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + creemSecret(env),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        product_id: pid,
+        success_url: 'https://animifyai.com/en/payment/success/',
+        cancel_url: 'https://animifyai.com/en/payment/cancel/',
+        metadata: { email: (email || '').toLowerCase() },
+      }),
+    });
+    const d = await r.json();
+    if (d.checkout_url) return json({ url: d.checkout_url }, 200, req);
+    return json({ error: d.message || 'Creem checkout failed' }, 400, req);
+  } catch (e) { return json({ error: e.message }, 503, req); }
+}
+
+async function handleCreemWebhook(req, env) {
+  try {
+    const raw = await req.text();
+    const sig = req.headers.get('creem-signature') || '';
+    const secret = creemSig(env);
+
+    // Verify webhook signature if secret is set
+    if (secret) {
+      const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
+      const ok = await crypto.subtle.verify('HMAC', key, hex2buf(sig), new TextEncoder().encode(raw));
+      if (!ok) return new Response('Invalid signature', { status: 401 });
+    }
+
+    const ev = JSON.parse(raw);
+    if (ev.event === 'checkout.completed' || ev.event === 'subscription.paid' || ev.event === 'subscription.active') {
+      const pid = ev.data?.product_id;
+      const email = (ev.data?.customer?.email || ev.data?.metadata?.email || '').toLowerCase();
+      if (!pid || !email) return new Response('Missing data', { status: 200 });
+
+      // Find plan by product ID
+      let plan = null;
+      for (const [k, v] of Object.entries(CONFIG.CREEM_PRODUCTS)) {
+        if (v === pid) { plan = k; break; }
+      }
+      if (!plan || !CONFIG.PLANS[plan]) return new Response('Unknown product', { status: 200 });
+
+      if (env.DB) {
+        await ensureDB(env);
+        await upsertUser(email, {}, env);
+        await env.DB.prepare('UPDATE users SET credits = credits + ? WHERE email = ?').bind(CONFIG.PLANS[plan].credits, email).run();
+        if (CONFIG.PLANS[plan].type === 'subscription' || CONFIG.PLANS[plan].type === 'subscription_annual') {
+          await env.DB.prepare('UPDATE users SET plan = ? WHERE email = ?').bind(plan, email).run();
+        }
+      }
+      console.log('[creem] Credited ' + email + ' with ' + CONFIG.PLANS[plan].credits + ' credits (' + plan + ')');
+    }
+    return new Response('OK', { status: 200 });
+  } catch (e) { return new Response('Webhook error: ' + e.message, { status: 200 }); }
+}
+
+function hex2buf(hex) {
+  const len = hex.length / 2;
+  const buf = new Uint8Array(len);
+  for (let i = 0; i < len; i++) buf[i] = parseInt(hex.substr(i * 2, 2), 16);
+  return buf.buffer;
+}
+
 /* ═══ Blog Images (KV-backed) ═══ */
 async function handleBlogImagesIndex(req, env) {
   const kv = env.USAGE_KV;
@@ -882,6 +974,8 @@ export default {
 
       if (p === '/api/paypal/order' && req.method === 'POST') return handlePayPalOrder(req, env);
       if (p === '/api/paypal/capture' && req.method === 'POST') return handlePayPalCapture(req, env);
+      if (p === '/api/creem/checkout' && req.method === 'POST') return handleCreemCheckout(req, env);
+      if (p === '/api/creem/webhook' && req.method === 'POST') return handleCreemWebhook(req, env);
 
       if (p === '/api/usage' && req.method === 'POST') return handleUsage(req, env);
       if (p.startsWith('/api/admin/')) return handleAdmin(req, env, p);
