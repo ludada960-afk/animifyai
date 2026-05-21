@@ -397,6 +397,27 @@ async function generateImage() {
       }
       throw new Error(d.details ? d.error + ' — ' + d.details : d.error);
     }
+
+    // Async mode: poll for result
+    if (d.jobId) {
+      const startTime = Date.now();
+      const maxWait = 120000; // 2 min timeout
+      while (Date.now() - startTime < maxWait) {
+        await new Promise(r => setTimeout(r, 2500));
+        const sr = await fetch(CONFIG.workerURL + '/gen-status?id=' + d.jobId);
+        const sd = await sr.json();
+        if (sd.error) throw new Error(sd.error);
+        if (sd.status === 'COMPLETED' && sd.image) {
+          d.image = sd.image;
+          d.source = sd.source || 'animagine-xl';
+          break;
+        }
+        if (sd.status === 'FAILED') throw new Error('Generation failed');
+        // Still IN_QUEUE or IN_PROGRESS — keep polling
+      }
+      if (!d.image) throw new Error('Generation timed out. Please try again.');
+    }
+
     if (!d.image) throw new Error('No image returned');
 
     // Load generated image, crop to match input aspect ratio
