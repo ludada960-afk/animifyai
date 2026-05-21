@@ -13,7 +13,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY handler.py .
+COPY preload.py .
 
-ENV MODEL_CACHE=/app/models
+# /runpod-volume is the default network volume mount on RunPod serverless.
+# Override MODEL_CACHE if you mount the volume at a different path.
+ENV MODEL_CACHE=/runpod-volume/models
 
 CMD ["python", "handler.py"]

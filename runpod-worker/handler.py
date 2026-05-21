@@ -2,7 +2,6 @@
 AnimifyAI — RunPod Serverless Worker
 Animagine XL 4.0 img2img anime style transfer
 """
-
 import runpod
 import torch
 from diffusers import StableDiffusionXLImg2ImgPipeline, AutoencoderKL
@@ -11,12 +10,16 @@ import base64
 import io
 import os
 import time
+import sys
+import traceback
 
 MODEL_ID = "cagliostrolab/animagine-xl-4.0"
 VAE_ID = "madebyollin/sdxl-vae-fp16-fix"
-MODEL_CACHE = os.environ.get("MODEL_CACHE", "/app/models")
 
-# Style prompts — Animagine XL uses Danbooru-style tagging
+# Network volume mount path (set in RunPod endpoint template)
+# Falls back to /app/models for Docker-baked cache
+MODEL_CACHE = os.environ.get("MODEL_CACHE", "/runpod-volume/models")
+
 STYLE_PROMPTS = {
     "ghibli": (
         "ghibli style, studio ghibli, soft watercolor, warm colors, hand-drawn, "
@@ -44,31 +47,60 @@ STYLE_PROMPTS = {
     ),
 }
 
-NEGATIVE = "low quality, worst quality, blurry, ugly, deformed, bad anatomy, watermark, text, signature"
+NEGATIVE = (
+    "low quality, worst quality, blurry, ugly, deformed, bad anatomy, "
+    "watermark, text, signature, extra fingers, mutated hands"
+)
 
 pipe = None
+_load_attempted = False
 
 
 def load_pipe():
-    global pipe
+    global pipe, _load_attempted
+    if _load_attempted and pipe is None:
+        raise RuntimeError("Model failed to load on previous attempt")
+    _load_attempted = True
+
+    print(f"[animify] Loading model from cache: {MODEL_CACHE}", flush=True)
+    print(f"[animify] Disk free: {_df('/')}", flush=True)
+    print(f"[animify] Cache exists: {os.path.isdir(MODEL_CACHE)}", flush=True)
+
+    t0 = time.time()
+
     vae = AutoencoderKL.from_pretrained(
         VAE_ID,
         torch_dtype=torch.float16,
         cache_dir=MODEL_CACHE,
+        local_files_only=False,
     )
+
     pipe = StableDiffusionXLImg2ImgPipeline.from_pretrained(
         MODEL_ID,
         vae=vae,
         torch_dtype=torch.float16,
         use_safetensors=True,
         cache_dir=MODEL_CACHE,
+        local_files_only=False,
     )
+
     pipe.to("cuda")
-    print(f"[animify] Model loaded. VRAM: {torch.cuda.max_memory_allocated() / 1024**3:.1f}GB")
+
+    elapsed = time.time() - t0
+    vram = torch.cuda.max_memory_allocated() / 1024**3
+    print(f"[animify] Model loaded in {elapsed:.0f}s, VRAM: {vram:.1f}GB", flush=True)
+
+
+def _df(path):
+    try:
+        s = os.statvfs(path)
+        gb = (s.f_frsize * s.f_bavail) / (1024**3)
+        return f"{gb:.1f}GB"
+    except Exception:
+        return "unknown"
 
 
 def decode_image(b64_str):
-    """Decode base64 image, handling optional data URI prefix."""
     if "," in b64_str:
         b64_str = b64_str.split(",")[1]
     raw = base64.b64decode(b64_str)
@@ -99,10 +131,11 @@ def handler(job):
     style = inp.get("style", "")
     base_prompt = STYLE_PROMPTS.get(style, STYLE_PROMPTS["ghibli"])
     quality = inp.get("quality", "high")
-    if quality == "paid":
-        extra = "highly detailed, sharp focus, HQ, anime illustration"
-    else:
-        extra = "anime style"
+    extra = (
+        "highly detailed, sharp focus, HQ, anime illustration"
+        if quality == "paid"
+        else "anime style"
+    )
     prompt = f"{base_prompt}, {extra}"
     negative = inp.get("negative_prompt", NEGATIVE)
     strength = float(inp.get("strength", 0.75))
@@ -120,10 +153,15 @@ def handler(job):
     ).images[0]
     elapsed = time.time() - t0
 
-    print(f"[animify] Generated {w}x{h} in {elapsed:.1f}s — steps={steps} strength={strength}")
+    print(
+        f"[animify] Generated {w}x{h} in {elapsed:.1f}s "
+        f"steps={steps} strength={strength}",
+        flush=True,
+    )
 
     return {"image": encode_image(result), "elapsed": round(elapsed, 1)}
 
 
 if __name__ == "__main__":
+    print(f"[animify] Starting worker, MODEL_CACHE={MODEL_CACHE}", flush=True)
     runpod.serverless.start({"handler": handler})
