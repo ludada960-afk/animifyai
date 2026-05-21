@@ -381,7 +381,7 @@ async function generateImage() {
   showLoading();
 
   try {
-    const res = await fetch(CONFIG.workerURL + '/api/generate', {
+    const res = await fetch(CONFIG.workerURL + '/gen', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(state.user?.token ? { Authorization: 'Bearer ' + state.user.token } : {}) },
       body: JSON.stringify({ image: state.uploadedBase64, style: state.selectedStyle, fingerprint: getFP(), width: state.imageWidth || 1024, height: state.imageHeight || 1024 }),
