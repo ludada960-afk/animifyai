@@ -101,6 +101,8 @@ def _df(path):
 
 
 def decode_image(b64_str):
+    if not b64_str or len(b64_str) < 100:
+        raise ValueError(f"Invalid image data (too short: {len(b64_str) if b64_str else 0} chars)")
     if "," in b64_str:
         b64_str = b64_str.split(",")[1]
     raw = base64.b64decode(b64_str)
