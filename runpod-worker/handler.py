@@ -166,4 +166,5 @@ def handler(job):
 
 if __name__ == "__main__":
     print(f"[animify] Starting worker, MODEL_CACHE={MODEL_CACHE}", flush=True)
+    load_pipe()  # preload at startup so health check doesn't time out
     runpod.serverless.start({"handler": handler})
