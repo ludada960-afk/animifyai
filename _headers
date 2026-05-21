@@ -5,10 +5,10 @@
   Permissions-Policy: camera=(), microphone=(), geolocation=()
 
 /assets/*
-  Cache-Control: public, max-age=2592000, immutable
+  Cache-Control: public, max-age=2592000
 
 /assets/images/*
-  Cache-Control: public, max-age=2592000, immutable
+  Cache-Control: public, max-age=2592000
 
 /*.html
   Cache-Control: public, max-age=3600
